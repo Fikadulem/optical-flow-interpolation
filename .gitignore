@@ -1,0 +1,54 @@
+.DS_Store
+# macOS
+.AppleDouble
+.LSOverride
+
+# Build directories
+/build/
+
+# CMake artifacts
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/install_manifest.txt
+/Makefile
+
+# Compiled object files and libraries
+*.o
+*.obj
+*.so
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+
+# Static archives
+*.lo
+*.la
+
+# Logs and coverage
+*.log
+/coverage/
+lcov-report/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS Finder
+Thumbs.db
+
+# Debug and profiling
+*.dSYM/
+
+# Misc
+*.tmp
+*.temp
