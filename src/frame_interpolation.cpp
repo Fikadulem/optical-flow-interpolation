@@ -1,6 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
-#include <opencv2/optflow.hpp>
+//#include <opencv2/optflow.hpp>
 
 using namespace cv;
 
@@ -8,6 +8,7 @@ using namespace cv;
 // I0, I1 : input frames (CV_8UC3 or CV_8UC1), same size
 // vs     : output symmetric flow field (CV_32FC2)
 // returns: true on success
+/*
 bool computeSymmetricFlowTVL1(const Mat& I0, const Mat& I1, Mat& vs)
 {
     if (I0.empty() || I1.empty()) {
@@ -42,6 +43,80 @@ bool computeSymmetricFlowTVL1(const Mat& I0, const Mat& I1, Mat& vs)
 
     // Backward flow: I1 -> I0
     tvl1->calc(g1, g0, flow_b);
+
+    // Build symmetric flow:
+    // v_s(x) = 0.5 * (v_f(x) - v_b(x))
+    vs.create(flow_f.size(), flow_f.type());
+
+    for (int y = 0; y < vs.rows; ++y) {
+        const Point2f* pf = flow_f.ptr<Point2f>(y);
+        const Point2f* pb = flow_b.ptr<Point2f>(y);
+        Point2f*       ps = vs.ptr<Point2f>(y);
+
+        for (int x = 0; x < vs.cols; ++x) {
+            Point2f vf = pf[x];
+            Point2f vb = pb[x];
+            ps[x] = 0.5f * (vf - vb);
+        }
+    }
+
+    return true;
+}
+*/
+
+// Compute symmetric flow v_s between I0 and I1 using Farnebäck optical flow.
+// I0, I1 : input frames (CV_8UC3 or CV_8UC1), same size
+// vs     : output symmetric flow field (CV_32FC2)
+// returns: true on success
+bool computeSymmetricFlowFarneback(const Mat& I0, const Mat& I1, Mat& vs)
+{
+    if (I0.empty() || I1.empty()) {
+        std::cerr << "Error: one or both input frames are empty.\n";
+        return false;
+    }
+
+    if (I0.size() != I1.size()) {
+        std::cerr << "Error: input frames must have the same size.\n";
+        return false;
+    }
+
+    // Convert to grayscale for optical flow
+    Mat g0, g1;
+    if (I0.channels() == 3)
+        cvtColor(I0, g0, COLOR_BGR2GRAY);
+    else
+        g0 = I0.clone();
+
+    if (I1.channels() == 3)
+        cvtColor(I1, g1, COLOR_BGR2GRAY);
+    else
+        g1 = I1.clone();
+
+    Mat flow_f, flow_b;
+
+    // Forward flow: I0 -> I1
+    calcOpticalFlowFarneback(
+        g0, g1, flow_f,
+        0.5,   // pyr_scale
+        3,     // levels
+        15,    // winsize
+        3,     // iterations
+        5,     // poly_n
+        1.2,   // poly_sigma
+        0      // flags
+    );
+
+    // Backward flow: I1 -> I0
+    calcOpticalFlowFarneback(
+        g1, g0, flow_b,
+        0.5,
+        3,
+        15,
+        3,
+        5,
+        1.2,
+        0
+    );
 
     // Build symmetric flow:
     // v_s(x) = 0.5 * (v_f(x) - v_b(x))

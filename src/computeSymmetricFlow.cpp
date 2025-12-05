@@ -1,10 +1,13 @@
 #include "computeSymmetricFlow.h"
 #include "spatialRegularization.h"
-#include <opencv2/optflow.hpp>
+#ifdef HAVE_OPTFLOW
+# include <opencv2/optflow.hpp>
+#endif
 #include <iostream>
 
 bool computeSymmetricFlowTVL1(const cv::Mat& I0, const cv::Mat& I1, cv::Mat& vs)
 {
+#ifdef HAVE_OPTFLOW
     if (I0.empty() || I1.empty()) {
         std::cerr << "Error: one or both input frames are empty.\n";
         return false;
@@ -52,4 +55,13 @@ bool computeSymmetricFlowTVL1(const cv::Mat& I0, const cv::Mat& I1, cv::Mat& vs)
         }
     }
     return true;
+#else
+    std::cerr << "Error: optflow module not available. Use computeSymmetricFlowFarneback instead.\n";
+    return false;
+#endif
 }
+            ps[x] = 0.5f * (pf[x] - pb[x]);
+        }
+    }
+    return true;
+}*/

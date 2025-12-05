@@ -1,5 +1,8 @@
 #include "spatialRegularization.h"
-#include <opencv2/ximgproc.hpp>
+#ifdef HAVE_XIMGPROC
+# include <opencv2/ximgproc.hpp>
+#endif
+#include <vector>
 
 // Apply edge-aware smoothing to optical flow using joint bilateral filter algorithm
 void jointBilateralRegularization(const cv::Mat &guide, cv::Mat &flow,
@@ -17,12 +20,21 @@ void jointBilateralRegularization(const cv::Mat &guide, cv::Mat &flow,
     }
     guideGray.convertTo(guideGray, CV_32F);
 
+#ifdef HAVE_XIMGPROC
     for (int i = 0; i < 2; ++i) {
         cv::ximgproc::jointBilateralFilter(
             guideGray, channels[i], channels[i],
             d, sigmaColor, sigmaSpace
         );
     }
+#else
+    // Fallback: use standard bilateral filter if ximgproc is not available
+    for (int i = 0; i < 2; ++i) {
+        cv::Mat tmp;
+        cv::bilateralFilter(channels[i], tmp, d, sigmaColor, sigmaSpace);
+        channels[i] = tmp;
+    }
+#endif
 
     cv::merge(channels, flow);
 }
