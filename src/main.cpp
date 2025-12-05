@@ -1,63 +1,41 @@
-#include <iostream>
-#include "include/computeSymmetricFlow.h"
 #include <opencv2/opencv.hpp>
+#include "computeSymmetricFlow.h"
+#include "warpUtils.h"
+#include <iostream>
 
-cv::Mat warpFrame(const cv::Mat &frame, const cv::Mat &flow) {
-    cv::Mat map_x(frame.size(), CV_32FC1);
-    cv::Mat map_y(frame.size(), CV_32FC1);
+// main fnction
 
-    for (int y = 0; y < frame.rows; ++y) {
-        for (int x = 0; x < frame.rows; ++x) {
-            cv::Point2f f = flow.at<cv::Point2f>(y, x);
-            map_x.at<float>(y, x) = x + f.x;
-            map_y.at<float>(y, x) = y + f.y;
-        }
-
-    }
-    cv::Mat warped;
-    cv::remap(frame, warped, map_x, map_y, cv::INTER_LINEAR, cv::BORDER_REFLECT);
-    return warped;
-
-}
-
-int main()
-{
-    // Manually set your video path here
-    std::string videoPath = "/path/to/video.mp4";
-
-    std::vector<cv::Mat> frames;
-
-    if (!loadVideoFrames(videoPath, frames)) {
-        std::cerr << "Failed to load frames.\n";
-        return 1;
-    }
-
-    std::cout << "Frames loaded: " << frames.size() << "\n";
-    std::cout << "Resolution: "
-    << frames[0].cols << " x "
-    << frames[0].rows  << "\n";
-
-    // Example: use frames for interpolation
-    // cv::Mat f0 = frames[10];
-    // cv::Mat f1 = frames[11];
-
-    return 0;
-}
-bool loadVideoFrames(const std::string& videoPath, std::vector<cv::Mat>& frames)
-{
-    frames.clear();
+int main(int argc, char** argv) {
+    std::string videoPath = "video.mp4";
+    if (argc >= 2) videoPath = argv[1];
 
     cv::VideoCapture cap(videoPath);
     if (!cap.isOpened()) {
-        std::cerr << "Error: cannot open video: " << videoPath << "\n";
-        return false;
+        std::cerr << "Cannot open video file: " << videoPath << "\n";
+        return -1;
     }
 
-    cv::Mat frame;
-    while (cap.read(frame)) {
-        if (frame.empty()) break;
-        frames.push_back(frame.clone());
+    cv::Mat frame0, frame1;
+    cap >> frame0;
+    cap >> frame1;
+
+    if (frame0.empty() || frame1.empty()) {
+        std::cerr << "Not enough frames to interpolate.\n";
+        return -1;
     }
 
-    return !frames.empty();
+    cv::Mat vs;
+    if (!computeSymmetricFlowTVL1(frame0, frame1, vs)) {
+        std::cerr << "Failed to compute symmetric flow.\n";
+        return -1;
+    }
+
+    cv::Mat interpolated = interpolateSymmetric(frame0, frame1, vs);
+
+    cv::imshow("Frame 0", frame0);
+    cv::imshow("Frame 1", frame1);
+    cv::imshow("Interpolated Midpoint", interpolated);
+    cv::waitKey(0);
+
+    return 0;
 }
