@@ -8,4 +8,10 @@ bool sampleFrameBilinear(const cv::Mat& frame, float x, float y, cv::Vec3b& outP
 // Interpolate mid-point frame using symmetric flow
 cv::Mat interpolateSymmetric(const cv::Mat& I0, const cv::Mat& I1, const cv::Mat& vs);
 
+// Occlusion-aware interpolation: use mask to reduce blending where flows are inconsistent
+cv::Mat interpolateSymmetricWithOcclusion(const cv::Mat& I0,
+										  const cv::Mat& I1,
+										  const cv::Mat& vs,
+										  const cv::Mat& occMask);
+
 #endif // WARP_UTILS_H
