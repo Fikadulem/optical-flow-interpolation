@@ -5,4 +5,7 @@
 // Computes symmetric flow to midpoint using TVL1
 bool computeSymmetricFlowTVL1(const cv::Mat& I0, const cv::Mat& I1, cv::Mat& vs);
 
+// Compute symmetric flow v_s between I0 and I1 using Farnebäck optical flow.
+bool computeSymmetricFlowFarneback(const cv::Mat& I0, const cv::Mat& I1, cv::Mat& vs);
+
 #endif // COMPUTE_SYMMETRIC_FLOW_H
