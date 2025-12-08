@@ -1,5 +1,3 @@
-
-
 # Tell CMake exactly where your OpenCV installation is
 set(OpenCV_DIR "C:/Users/olade/opencv/build")
 
@@ -17,7 +15,8 @@ add_executable(optical_flow_interpolation
     src/main.cpp
     src/frame_interpolation.cpp
     src/occlusion.cpp
-    src/spatial_regularization.cpp
+    src/spatialRegularization.cpp
+    src/warpUtils.cpp
 )
 
 target_link_libraries(optical_flow_interpolation

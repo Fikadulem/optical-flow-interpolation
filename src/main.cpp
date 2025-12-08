@@ -101,34 +101,31 @@ double computeSSIM(const cv::Mat& pred, const cv::Mat& gt) {
 
 // main function 
 int main() {
-    const std::string path0 = "C:/Users/olade/optical-flow-interpolation/frame10.png";
-    const std::string path1 = "C:/Users/olade/optical-flow-interpolation/frame11.png";
-    const std::string pathGT = "C:/Users/olade/optical-flow-interpolation/frame10i11.png";
+    cv::Mat frame0 = cv::imread("../basketframe10.png");
+    cv::Mat frame1 = cv::imread("../basketframe11.png");
+    cv::Mat frameGT = cv::imread("../basketframe10i11.png");
 
-    cv::Mat frame10 = cv::imread(path0);
-    cv::Mat frame11 = cv::imread(path1);
-    cv::Mat frame10i11 = cv::imread(pathGT);
-    if (frame10.empty() || frame11.empty() || frame10i11.empty()) {
+    if (frame0.empty() || frame1.empty() || frameGT.empty()) {
         std::cerr << "Error reading input images." << std::endl;
         return -1;
     }
 
-    if (frame10.size() != frame11.size()) {
+    if (frame0.size() != frame1.size()) {
         std::cerr << "Input frames must have the same size." << std::endl;
         return -1;
     }
 
     cv::Mat vs;
-    if (!computeSymmetricFlowFarneback(frame10, frame11, vs)) {
+    if (!computeSymmetricFlowFarneback(frame0, frame1, vs)) {
         std::cerr << "Failed to compute symmetric flow." << std::endl;
         return -1;
     }
 
-    cv::Mat interpolated = interpolateSymmetric(frame10, frame11, vs);
+    cv::Mat interpolated = interpolateSymmetric(frame0, frame1, vs);
 
-    double maie = computeMAIE(interpolated, frame10i11);
-    double psnr = computePSNR(interpolated, frame10i11);
-    double ssim = computeSSIM(interpolated, frame10i11);
+    double maie = computeMAIE(interpolated, frameGT);
+    double psnr = computePSNR(interpolated, frameGT);
+    double ssim = computeSSIM(interpolated, frameGT);
     std::cout << "PSNR = " << psnr << " dB" << std::endl;
     std::cout << "SSIM = " << ssim << std::endl;
     std::cout << "Mean Absolute Interpolation Error = " << maie << std::endl;
@@ -138,8 +135,8 @@ int main() {
     //cv::imwrite("interpolated_midpoint.jpg", interpolated);
 
     // Optional display; comment out if running headless
-    cv::imshow("Frame 10", frame10);
-    cv::imshow("Frame 11", frame11);
+    cv::imshow("Frame 10", frame0);
+    cv::imshow("Frame 11", frame1);
     cv::imshow("Interpolated Midpoint", interpolated);
     cv::waitKey(0);
 
