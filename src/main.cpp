@@ -148,8 +148,10 @@ int main(int argc, char** argv) {
     if (frame11.channels() ==3) cvtColor(frame11, g1, COLOR_BGR2GRAY); else g1 = frame11.clone();
     computeSymmetricFlowFarneback(frame10, frame11, vsReg);
     jointBilateralRegularization(g0, vsReg, 5, 20.0, 20.0);
+    
     // Compute occlusion mask (forward-backward consistency)
     Mat occMask = computeOcclusionMaskFarneback(frame10, frame11, 1.0f);
+    
     // Interpolate with occlusion awareness
     Mat interpReg = interpolateSymmetricWithOcclusion(frame10, frame11, vsReg, occMask);
     
