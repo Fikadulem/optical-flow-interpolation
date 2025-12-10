@@ -1,6 +1,6 @@
 # optical-flow-interpolation
 
-Frame interpolation using symmetric optical flow (Farneback), with optional spatial regularization and occlusion handling. The program reads pairs of frames, synthesizes the intermediate frame, computes quality metrics (MAIE, PSNR, SSIM), and writes outputs per dataset.
+Frame interpolation using symmetric optical flow (Farneback), with spatial regularization and occlusion handling. The program reads pairs of frames, synthesizes the intermediate frame, computes quality metrics (MAIE, PSNR, SSIM), and writes outputs per dataset.
 
 **Key Features**
 - **Two Interpolation Modes:** Raw symmetric flow and Spatial regularized + Occlusion-aware.
