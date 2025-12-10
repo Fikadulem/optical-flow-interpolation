@@ -1,6 +1,19 @@
 #include "spatialRegularization.h"
 #include <opencv2/ximgproc.hpp>
 
+/**
+* Precondtions:
+* - flow must be 2 channnl
+* - Giude must be single channe
+* - Must be positive integer
+* - sigmaColor and sigmaSPace must be positve number
+* - OpenCV `ximgproc`
+* Postconditions
+* - flow must be in place
+* - Smoothed flow
+* - size and type of flow unchanged
+*/
+
 // Apply edge-aware smoothing to optical flow using joint bilateral filter algorithm
 void jointBilateralRegularization(const cv::Mat &guide, cv::Mat &flow,
                                   int d, double sigmaColor, double sigmaSpace) {

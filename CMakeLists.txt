@@ -6,10 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenCV REQUIRED)
 
-include_directories(${OpenCV_INCLUDE_DIRS})
+# include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${PROJECT_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 
 add_executable(optical_flow_interpolation
     src/main.cpp
+    src/computeSymmetricFlow.cpp
+    src/spatialRegularization.cpp
+    src/warpUtils.cpp
+    src/occlusionHandling.cpp
 )
 
 target_link_libraries(optical_flow_interpolation

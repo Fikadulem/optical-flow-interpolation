@@ -4,6 +4,10 @@
 #include <iostream>
 
 using namespace cv;
+// Compute symmetric flow v_s between I0 and I1 using TV-L1.
+// I0, I1 : input frames (CV_8UC3 or CV_8UC1), same size
+// vs     : output symmetric flow field (CV_32FC2)
+// returns: true on success
 
 bool computeSymmetricFlowTVL1(const cv::Mat& I0, const cv::Mat& I1, cv::Mat& vs)
 {
@@ -204,75 +208,3 @@ static bool sampleFrameBilinear(const Mat& frame, float x, float y, Vec3b& outPi
 
     return true;
 }
-
-// Symmetric interpolation (no occlusion yet)
-// I0, I1  : input RGB frames (CV_8UC3)
-// vs      : symmetric flow field at middle time (CV_32FC2)
-// returns : interpolated midpoint frame
-// Mat interpolateSymmetric(
-//     const Mat& I0,
-//     const Mat& I1,
-//     const Mat& vs)
-// {
-//     CV_Assert(I0.size() == I1.size());
-//     CV_Assert(I0.type() == CV_8UC3 && I1.type() == CV_8UC3);
-//     CV_Assert(vs.size() == I0.size() && vs.type() == CV_32FC2);
-
-//     Mat I_mid(I0.size(), CV_8UC3);
-
-//     const int W = I0.cols;
-//     const int H = I0.rows;
-
-//     for (int y = 0; y < H; ++y)
-//     {
-//         for (int x = 0; x < W; ++x)
-//         {
-//             // symmetric flow at the midpoint (motion to t=0.5)
-//             Point2f v = vs.at<Point2f>(y, x);
-
-//             // Coordinates in I0 and I1 along trajectories:
-//             // midpoint -> frame 0 : (x - v)
-//             // midpoint -> frame 1 : (x + v)
-//             float x0 = x - v.x;
-//             float y0 = y - v.y;
-
-//             float x1 = x + v.x;
-//             float y1 = y + v.y;
-
-//             Vec3b c0, c1;
-//             bool valid0 = sampleFrameBilinear(I0, x0, y0, c0);
-//             bool valid1 = sampleFrameBilinear(I1, x1, y1, c1);
-
-//             Vec3b out;
-
-//             if (valid0 && valid1)
-//             {
-//                 // Ideal symmetric case: both samples valid
-//                 out[0] = static_cast<uchar>((c0[0] + c1[0]) * 0.5f);
-//                 out[1] = static_cast<uchar>((c0[1] + c1[1]) * 0.5f);
-//                 out[2] = static_cast<uchar>((c0[2] + c1[2]) * 0.5f);
-//             }
-//             else if (valid0 && !valid1)
-//             {
-//                 out = c0; // only I0 contributed
-//             }
-//             else if (!valid0 && valid1)
-//             {
-//                 out = c1; // only I1 contributed
-//             }
-//             else
-//             {
-//                 // both invalid (outside image) → fallback to simple average at (x,y)
-//                 const Vec3b& p0 = I0.at<Vec3b>(y, x);
-//                 const Vec3b& p1 = I1.at<Vec3b>(y, x);
-//                 out[0] = static_cast<uchar>((p0[0] + p1[0]) * 0.5f);
-//                 out[1] = static_cast<uchar>((p0[1] + p1[1]) * 0.5f);
-//                 out[2] = static_cast<uchar>((p0[2] + p1[2]) * 0.5f);
-//             }
-
-//             I_mid.at<Vec3b>(y, x) = out;
-//         }
-//     }
-
-//     return I_mid;
-// }
