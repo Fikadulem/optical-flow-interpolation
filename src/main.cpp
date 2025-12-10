@@ -7,7 +7,10 @@
 #include "warpUtils.h"
 #include "occlusionHandling.h"
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 using namespace cv;
+using namespace std;
 
 // Compute Mean Absolute Interpolation Error
 double computeMAIE(const cv::Mat& pred, const cv::Mat& gt) {
@@ -105,75 +108,116 @@ double computeSSIM(const cv::Mat& pred, const cv::Mat& gt) {
 }
 
 
-// main function
+// Main function
 int main(int argc, char** argv) {
 
-    if (argc < 4) {
-        std::cerr << "Usage: " <<argv[0] << " <frame10> <frame11> <frame10i1>\n";
-        return -1;
+    // Dataset folder path
+    // std::string evalFolder = "/Users/fikadu.balcha/Downloads/data/eval_data/";
+    // std::string gtFolder = "/Users/fikadu.balcha/Downloads/data/ground_truth/";
+    // std::string interpFolder = "/Users/fikadu.balcha/Downloads/data/interpolated/";
+
+    filesystem::path exePath = filesystem::canonical(filesystem::path(argv[0]));
+    filesystem::path buildDir = exePath.parent_path();
+    filesystem::path repoRoot = buildDir.parent_path();
+    filesystem::path dataRoot = repoRoot / "inputframes";
+    if (!filesystem::exists(dataRoot)) {
+        dataRoot = repoRoot / "data";
     }
 
-    Mat frame10 = imread(argv[1]);
-    Mat frame11 = imread(argv[2]);
-    Mat frame10i11 = imread(argv[3]);
-    if (frame10.empty() || frame11.empty() || frame10i11.empty()) {
-        std::cerr << "Error reading input images.\n";
-        return -1;
+    string evalFolder = (dataRoot / "eval_data").string() + "/";
+    string gtFolder = (dataRoot / "ground_truth").string() + "/";
+    string interpFolder = (dataRoot / "interpolated").string() + "/";
+
+    // print header once
+    std::cout << std::left << std::setw(20) << "Dataset"
+              << " | MAIE: " << std::setw(4) << ""
+              << " | PSNR: " << std::setw(2)  << ""
+              << " | SSIM: " << "" << std::endl;
+    std::cout << std::string(18, '-') << "+" << std::string(13, '-') << "+" << std::string(11, '-') << "+" << std::string(8, '-') << std::endl;
+
+    // Open results file
+    std::ofstream results("/Users/fikadu.balcha/Downloads/results.txt", std::ios::out);
+    if (!results) {
+        std::cerr << "Warning: could not open results file" << std::endl;
     }
 
-    if (frame10.size() != frame11.size()) {
-        std::cerr << "Input frames must have the same size.\n";
-        return -1;
+    for (auto& entry : std::filesystem::directory_iterator(gtFolder)) {
+        if (!entry.is_directory()) continue;
+        if (entry.path().filename() == ".DS_Store") continue;
+        String path = evalFolder + entry.path().filename().string() + "/frame10.png";
+        Mat frame10 = imread(evalFolder + entry.path().filename().string() + "/frame10.png");
+        Mat frame11 = imread(evalFolder + entry.path().filename().string() + "/frame11.png");
+        Mat frame10i11 = imread(gtFolder + entry.path().filename().string() + "/frame10i11.png");
+        if (frame10.empty() || frame11.empty() || frame10i11.empty()) {
+            std::cerr << "Error reading input image from folder " << entry.path().filename().string() << ".Skipping.\n";
+            continue;
+        }
+        // Interpolate without Spatial regularization and Occlution handling
+        Mat vsRaw;
+        if (!computeSymmetricFlowFarneback(frame10, frame11, vsRaw)) {
+            std::cerr << "Failed to compute raw symmetric flow.\n";
+            return -1;
+        }
+        Mat interpRaw = interpolateSymmetric(frame10, frame11, vsRaw);
+        if (interpRaw.empty()) {
+            std::cerr << "Interpolation produced empty result.\n";
+            continue;
+        }
+        // Create output directtory per dataset under the interpolated folder
+        std::string dataset = entry.path().filename().string();
+        std::string outDir = interpFolder + dataset + "/";
+        std::error_code ec;
+        std::filesystem::create_directories(outDir, ec);
+        if (ec) {
+            std::cerr << "Failed to create output directory " << outDir << ": " << ec.message() <<std::endl;
+        }
+        // Save interpolated image
+        imwrite(outDir + "mid_raw.png", interpRaw);
+
+        // Compute metrics for (interpolated without spatial regularization and occlusion handling)
+        double maieBefore = computeMAIE(interpRaw, frame10i11);
+        double psnrBefore = computePSNR(interpRaw, frame10i11);
+        double ssimBefore = computeSSIM(interpRaw, frame10i11);
+
+        // Print metrics
+        auto printRow = [&] (std::ostream& os, const std::string& label, double maie, double psnr, double ssim) {
+            os << std::left << std::setw(20) << label
+               << std::right << std::setw(8) << std::fixed << std::setprecision(4) << maie << "  "
+               << std::right << std::setw(8) << std::fixed << std::setprecision(4) << psnr << "  "
+               << std::right << std::setw(8) << std::fixed << std::setprecision(4) << ssim 
+               << std::endl;
+        };
+
+        printRow(std::cout, dataset, maieBefore, psnrBefore, ssimBefore);
+        if (results) printRow(results, dataset, maieBefore, psnrBefore, ssimBefore);
+
+        // // After SpatialRegularization and occlusion handling applied
+        Mat vsReg;
+        Mat g0, g1;
+        if (frame10.channels() ==3) cvtColor(frame10, g0, COLOR_BGR2GRAY); else g0 = frame10.clone();
+        if (frame11.channels() ==3) cvtColor(frame11, g1, COLOR_BGR2GRAY); else g1 = frame11.clone();
+        computeSymmetricFlowFarneback(frame10, frame11, vsReg);
+        jointBilateralRegularization(g0, vsReg, 5, 20.0, 20.0);
+
+        // Compute occlusion mask (forward-backward consistency)
+        Mat occMask = computeOcclusionMaskFarneback(frame10, frame11, 1.0f);
+        
+        // Interpolate with occlusion awareness
+        Mat interpReg = interpolateSymmetricWithOcclusion(frame10, frame11, vsReg, occMask);
+
+
+        // Compute metrics after (Spatial regularized and + Occlusion handling/aware)
+        double maieAfter = computeMAIE(interpReg, frame10i11);
+        double psnrAfter = computePSNR(interpReg, frame10i11);
+        double ssimAfter = computeSSIM(interpReg, frame10i11);
+
+
+        // Save interpolated image with Spatial regularized and + Occlusion handling/aware
+        imwrite(outDir + "mid_reg.png", interpReg);
+
+        // Print rows for after Spatial regularized and + Occlusion handling/aware
+        printRow(std::cout, dataset + " (after)", maieAfter, psnrAfter, ssimAfter);
+
     }
-
-    
-    // Before spatial regulazirization 
-    Mat vsRaw;
-    if (!computeSymmetricFlowFarneback(frame10, frame11, vsRaw)) {
-        std::cerr << "Failed to compute raw symmetric flow.\n";
-        return -1;
-    }
-    Mat interpRaw = interpolateSymmetric(frame10, frame11, vsRaw);
-    double maieRaw = computeMAIE(interpRaw, frame10i11);
-    Mat interpolated = interpolateSymmetric(frame10, frame11, vsRaw);
-    
-    // Compute Mean Absolute Interpolation Error
-    double maie = computeMAIE(interpolated, frame10i11);
-    std::cout << "Mean Absolute Interpolation Error before Spatial Regularization and Occlusion Handling = " << maie << std::endl;
-
-    // After SpatialRegularization
-    Mat vsReg;
-    Mat g0, g1;
-    if (frame10.channels() ==3) cvtColor(frame10, g0, COLOR_BGR2GRAY); else g0 = frame10.clone();
-    if (frame11.channels() ==3) cvtColor(frame11, g1, COLOR_BGR2GRAY); else g1 = frame11.clone();
-    computeSymmetricFlowFarneback(frame10, frame11, vsReg);
-    jointBilateralRegularization(g0, vsReg, 5, 20.0, 20.0);
-    
-    // Compute occlusion mask (forward-backward consistency)
-    Mat occMask = computeOcclusionMaskFarneback(frame10, frame11, 1.0f);
-    
-    // Interpolate with occlusion awareness
-    Mat interpReg = interpolateSymmetricWithOcclusion(frame10, frame11, vsReg, occMask);
-    
-    // Compute Mean Absolute Interpolation Error
-    double maieReg = computeMAIE(interpReg, frame10i11);
-    std::cout << "Mean Absolute Interpolation Error after Spatial Regularization and Occlusion Handling = " << maieReg << std::endl;
-    interpolated = interpReg;
-
-    double psnr = computePSNR(interpolated, frame10i11);
-    double ssim = computeSSIM(interpolated, frame10i11);
-    std::cout << "PSNR = " << psnr << " dB" << std::endl;
-    std::cout << "SSIM = " << ssim << std::endl;
-    // std::cout << "Mean Absolute Interpolation Error = " << maie << std::endl;
-    
-    // Display and save results  
-    imshow("Frame 10", frame10);
-    imwrite("frame10.jpg", frame10);
-    imshow("Frame 11", frame11);
-    imwrite("frame11.jpg", frame11);
-    imshow("Interpolated Midpoint", interpolated);
-    imwrite("interpolated_midpoint.jpg", interpolated);
-    waitKey(0);
-
-    return 0;
+    if (results) results.close();
 }

@@ -1,6 +1,14 @@
 #include "occlusionHandling.h"
 using namespace cv;
 
+// Preconditions:
+// - I0, I1: non-empty images of same size (grayscale or BGR)
+// - threshold > 0
+
+// Postconditions:
+// - Returns CV_32FC1 occlusion mask (1.0 = visible, 0.0 = occluded)
+// - Input images unchanged
+
 Mat computeOcclusionMask(const Mat &flowFwd,
                          const Mat &flowBwd,
                          float threshold) {
@@ -26,6 +34,8 @@ Mat computeOcclusionMask(const Mat &flowFwd,
 }
 
 // Compute occlusion mask by estimating forward/backward Farneback flows
+// Preconditions: I0, I1 non-empty, same size; threshold > 0
+// Postconditions: Returns CV_32FC1 mask (1.0 = visible, 0.0 = occluded); inputs unchanged
 Mat computeOcclusionMaskFarneback(const Mat& I0, const Mat& I1, float threshold) {
     CV_Assert(!I0.empty() && !I1.empty());
     CV_Assert(I0.size() == I1.size());

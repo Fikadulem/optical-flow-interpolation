@@ -1,6 +1,12 @@
 #include "warpUtils.h"
 
 // Bilinear sampling from RGB image at floating coordinates
+// Bilinear sample with bounds check (expects CV_8UC3)
+// this is responsible for bilinear sampling of a frame at floating point coordinates
+// frame : input frame
+// x, y  : floating point coordinates
+// outPixel : output pixel
+// returns  : true if sample is valid, false if out of bounds
 
 bool sampleFrameBilinear(const cv::Mat& frame, float x, float y, cv::Vec3b& outPixel)
 {
@@ -28,7 +34,10 @@ bool sampleFrameBilinear(const cv::Mat& frame, float x, float y, cv::Vec3b& outP
     );
     return true;
 }
-
+// Symmetric interpolation (no occlusion yet)
+// I0, I1  : input RGB frames (CV_8UC3)
+// vs      : symmetric flow field at middle time (CV_32FC2)
+// returns : interpolated midpoint frame
 cv::Mat interpolateSymmetric(const cv::Mat& I0, const cv::Mat& I1, const cv::Mat& vs)
 {
     CV_Assert(I0.size() == I1.size());
@@ -73,6 +82,10 @@ cv::Mat interpolateSymmetric(const cv::Mat& I0, const cv::Mat& I1, const cv::Mat
     }
     return I_mid;
 }
+// Symmetric interpolation regularazed and occlusion aware
+// I0, I1  : input RGB frames (CV_8UC3)
+// vs      : symmetric flow field at middle time (CV_32FC2)
+// returns : interpolated midpoint frame
 
 cv::Mat interpolateSymmetricWithOcclusion(const cv::Mat& I0,
                                           const cv::Mat& I1,
